@@ -24,14 +24,19 @@ BEGIN {
 };
 
 ################################################################################
-$Devel::Module::Trace::print = 0;
+$Devel::Module::Trace::print  = 0;
+$Devel::Module::Trace::filter = [];
 sub import {
-    my(undef, $options) = @_;
-    if($options) {
-        if($options eq 'print') {
+    my(undef, @options) = @_;
+    for my $option (@options) {
+        if($option eq 'print') {
             $Devel::Module::Trace::print = 1;
+        }
+        elsif($option =~ 'filter=(.*)$') {
+            my $filter = $1;
+            push @{$Devel::Module::Trace::filter}, $filter;
         } else {
-            die("unknown option: ".$options);
+            die("unknown option: ".$option);
         }
     }
     return;
@@ -74,9 +79,11 @@ sub print_pretty {
         $indent = 0;
         # get max caller and module
         ($max_module, $max_caller) = _get_max_pp_size($modules, 0, 0, 0);
+        return if $max_module == 0;
         print " ","-"x($max_module+$max_caller+34), "\n" if $indent == 0;
     }
     for my $mod (@{$raw}) {
+        next if _filtered($mod->{'name'});
         my($time, $milliseconds) = split(/\./mx, $mod->{'time'});
         printf(STDERR "| %s%08.5f | %-".$indent."s %-".($max_module-$indent)."s | %.6f | %-".$max_caller."s |\n",
                     POSIX::strftime("%H:%M:", localtime($time)),
@@ -128,9 +135,24 @@ BEGIN {
 };
 
 ################################################################################
+sub _filtered {
+    my($mod) = @_;
+    for my $f (@{$Devel::Module::Trace::filter}) {
+        if($mod =~ m|$f|mx) {
+            return(1);
+        }
+        if($f eq 'perl' && $mod =~ m|^[\d\.]+$|mx) {
+            return(1);
+        }
+    }
+    return;
+}
+
+################################################################################
 sub _get_max_pp_size {
     my($mods, $max_module, $max_caller, $cur_indent) = @_;
     for my $mod (@{$mods}) {
+        next if _filtered($mod);
         my $l1 = length($mod->{'name'}) + $cur_indent;
         my $l2 = length($mod->{'caller'});
         $max_module = $l1 if $max_module < $l1;
@@ -153,7 +175,6 @@ END {
 
 =head1 TODO
 
-    * add filter to hide ex. strict/warnings
     * add waterfall charts output
 
 =head1 REPOSITORY
