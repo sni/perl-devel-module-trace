@@ -7,13 +7,35 @@ modules and helps optimizing module usage in general.
 This module uses the Time::Hires module for timing and the POSIX module for
 the final output which may slightly interfer your results.
 
-
 ## Usage
 
-To get module trace information for the Benchmark module use this oneliner:
+```
+  perl -MDevel::Module::Trace[=<option1>,<option2>,...] -M<module> -e exit
+```
+
+## Options
+
+Options are supplied as command line options to the module itself. Multiple options can be separated by comma.
+
+```
+  perl -MDevel::Module::Trace=<option1>,<option2>,... -M<module> -e exit
+```
+
+### print
+
+Make the module print the results at exit.
 
 ```
   perl -MDevel::Module::Trace=print -MBenchmark -e exit
+```
+
+### filter
+
+Output filter are defined by the filter option. Multiple filter can be used as comma separated list.
+The generic `perl` filter hides requires like `use 5.008`.
+
+```
+  %> perl -MDevel::Module::Trace="filter=strict.pm,filter=warnings.pm,filter=perl" -MBenchmark -e exit
 ```
 
 ## Output
@@ -40,3 +62,12 @@ function.
   | 14:11:05.44706 |      warnings/register.pm | 0.000004 | /usr/share/perl/5.18/Tie/Hash.pm:6     |
    ------------------------------------------------------------------------------------------------
 ```
+
+## Example
+
+To get module trace information for the Benchmark module use this oneliner:
+
+```
+  perl -MDevel::Module::Trace=print -MBenchmark -e exit
+```
+
