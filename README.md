@@ -18,9 +18,9 @@ To get module trace information for the Benchmark module use this oneliner:
 
 ## Output
 
-The result is printed to STDERR on exit if using the 'print' option. You can get
-the raw results at any time with the 'Devel::Module::Trace::raw_result' function
-and force print the results table any time by the 'Devel::Module::Trace::print_pretty'
+The result is printed to STDERR on exit if using the `print` option. You can get
+the raw results at any time with the `Devel::Module::Trace::raw_result` function
+and force print the results table any time by the `Devel::Module::Trace::print_pretty`
 function.
 
 ```
