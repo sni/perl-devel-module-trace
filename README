@@ -1,4 +1,4 @@
-= Perl Module - Devel::Module::Trace
+# Perl Module - Devel::Module::Trace
 
 Devel::Module::Trace is a perl module which prints a table of all used and
 required module with its origin and elapsed time. This helps tear down slow
@@ -8,19 +8,22 @@ This module uses the Time::Hires module for timing and the POSIX module for
 the final output which may slightly interfer your results.
 
 
-== Usage
+## Usage
 
 To get module trace information for the Benchmark module use this oneliner:
 
+```
     perl -MDevel::Module::Trace=print -MBenchmark -e exit
+```
 
-== Output
+## Output
 
 The result is printed to STDERR on exit if using the 'print' option. You can get
 the raw results at any time with the 'Devel::Module::Trace::raw_result' function
 and force print the results table any time by the 'Devel::Module::Trace::print_pretty'
 function.
 
+```
     %> perl -MDevel::Module::Trace=print -MBenchmark -e exit
      -------------------------------------------------------------------------------------------
     | 13:02:25.17689 |  Benchmark.pm        | 0.009065 | -e:0                                   |
@@ -41,3 +44,4 @@ function.
     | 13:02:25.18122 |      Exporter.pm     | 0.000004 | /usr/share/perl/5.18/Benchmark.pm:433  |
     | 13:02:25.18145 |      Time/HiRes.pm   | 0.000005 | (eval 2):2                             |
      -------------------------------------------------------------------------------------------
+```
