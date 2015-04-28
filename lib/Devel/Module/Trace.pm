@@ -1,7 +1,9 @@
+## no critic
 package # hide package name from indexer
     DB;
 # allow -d:Devel::Module::Trace loading
 sub DB {}
+## use critic
 
 
 package Devel::Module::Trace;
