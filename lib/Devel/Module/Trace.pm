@@ -114,8 +114,8 @@ sub print_pretty {
 sub _enable {
     $enabled  = 1;
     *CORE::GLOBAL::require = sub {
-        my @caller = caller;
-        my $mod     = {name => $_[0], caller => $caller[1].':'.$caller[2], time => time };
+        my @caller  = caller;
+        my $mod     = {name => $_[0], caller => $caller[1].':'.$caller[2], time => time};
         my $t0      = [gettimeofday];
         my $old_lvl = $cur_lvl;
         $cur_lvl    = [];
@@ -123,7 +123,7 @@ sub _enable {
         my $elapsed = tv_interval($t0);
         $mod->{'elapsed'} = $elapsed;
         $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
-        $cur_lvl = $old_lvl;
+        $cur_lvl          = $old_lvl;
         push(@{$cur_lvl}, $mod);
         return $res;
     };
