@@ -1,3 +1,9 @@
+package # hide package name from indexer
+    DB;
+# allow -d:Devel::Module::Trace loading
+sub DB {}
+
+
 package Devel::Module::Trace;
 
 =head1 NAME
