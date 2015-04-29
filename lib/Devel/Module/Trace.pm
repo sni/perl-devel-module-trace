@@ -40,7 +40,7 @@ use warnings;
 use strict;
 use Devel::OverrideGlobalRequire;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 ################################################################################
 my $modules = [];
@@ -157,7 +157,7 @@ sub _trace_use {
     my $code_str = $code->[$l];
     my $i = $l-1;
     # try to concatenate previous lines if statement was multilined
-    while($i > 0 && $code->[$i] !~ m/^(.*\}|.*\;|=cut)\s*$/mxo) {
+    while($i > 0 && $code->[$i] && $code->[$i] !~ m/^(.*\}|.*\;|=cut)\s*$/mxo) {
         if($code->[$i] !~ m/^\s*$|^\s*\#/mxo) {
             $code_str = $code->[$i].$code_str;
         }
