@@ -24,16 +24,16 @@ use Devel::OverrideGlobalRequire;
 our $VERSION = '0.01';
 
 ################################################################################
-my $modules  = [];
-my $cur_lvl  = $modules;
-my $enabled  = 0;
+my $modules = [];
+my $cur_lvl = $modules;
 BEGIN {
     use Time::HiRes qw/gettimeofday tv_interval time/;
 };
 
 ################################################################################
-$Devel::Module::Trace::print  = 0;
-$Devel::Module::Trace::filter = [];
+$Devel::Module::Trace::print   = 0;
+$Devel::Module::Trace::filter  = [];
+$Devel::Module::Trace::enabled = 0 unless defined $Devel::Module::Trace::enabled;
 sub import {
     my(undef, @options) = @_;
     for my $option (@options) {
@@ -76,7 +76,7 @@ prints the results as ascii table to STDERR.
 =cut
 sub print_pretty {
     my $reenable = 0;
-    if($enabled) {
+    if($Devel::Module::Trace::enabled) {
         _disable();
         $reenable = 1;
     }
@@ -112,7 +112,7 @@ sub print_pretty {
 
 ################################################################################
 sub _enable {
-    $enabled  = 1;
+    $Devel::Module::Trace::enabled = 1;
     Devel::OverrideGlobalRequire::override_global_require(\&_trace_use);
     return;
 }
@@ -120,7 +120,7 @@ sub _enable {
 ################################################################################
 sub _trace_use {
     my($next_require,$module_name) = @_;
-    if(!$enabled) {
+    if(!$Devel::Module::Trace::enabled) {
         return &{$next_require}();
     }
     my($p,$f,$l) = caller(1);
@@ -147,7 +147,7 @@ sub _trace_use {
 
 ################################################################################
 sub _disable {
-    $enabled = 0;
+    $Devel::Module::Trace::enabled = 0;
     return;
 }
 
