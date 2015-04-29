@@ -132,7 +132,19 @@ sub _trace_use {
         $code = \@{"::_<$f"};
         ## use critics
     }
-    if(!$code->[$l] || $code->[$l] !~ m/^\s*(use|require)/mxo) {
+    if(!$code->[$l]) {
+        return &{$next_require}();
+    }
+    my $code_str = $code->[$l];
+    my $i = $l-1;
+    # try to concatenate previous lines if statement was multilined
+    while($i > 0 && $code->[$i] !~ m/^(.*\}|.*\;|=cut)\s*$/mxo) {
+        if($code->[$i] !~ m/^\s*$|^\s*\#/mxo) {
+            $code_str = $code->[$i].$code_str;
+        }
+        $i--;
+    }
+    if($code_str !~ m/^\s*(use|require)/mxo) {
         return &{$next_require}();
     }
     my $mod = {
