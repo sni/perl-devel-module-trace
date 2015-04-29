@@ -15,6 +15,25 @@ Devel::Module::Trace - Trace module origins
 
 This module traces use/require statements to print the origins of loaded modules
 
+=head1 SYNOPSIS
+
+=over 4
+
+  # load module
+  use Devel::Module::Trace;
+
+  # load other modules
+  use Some::Other::Modules;
+  require Even::More::Modules;
+
+  # output results
+  Devel::Module::Trace::print_pretty();
+
+  # using directly
+  perl -d:Module::Trace=print -M<Module> -e exit
+
+=back
+
 =cut
 
 use warnings;
@@ -222,6 +241,10 @@ END {
 =head1 REPOSITORY
 
     Git: http://github.com/sni/perl-devel-module-trace
+
+=head1 SEE ALSO
+
+    L<Devel::OverrideGlobalRequire>
 
 =head1 AUTHOR
 
