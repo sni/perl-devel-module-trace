@@ -28,6 +28,7 @@ my $modules = [];
 my $cur_lvl = $modules;
 BEGIN {
     use Time::HiRes qw/gettimeofday tv_interval time/;
+    $^P = $^P | 0x400; # Save source code lines, see perldoc perlvar
 };
 
 ################################################################################
@@ -129,7 +130,7 @@ sub _trace_use {
         no strict 'refs';
         $code = \@{"::_<$f"};
     }
-    if($code->[$l] !~ m/^\s*(use|require)/mxo) {
+    if(!$code->[$l] || $code->[$l] !~ m/^\s*(use|require)/mxo) {
         return &{$next_require}();
     }
     my $mod      = {name => $module_name, caller => $f.':'.$l, time => time};
