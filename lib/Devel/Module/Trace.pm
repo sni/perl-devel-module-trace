@@ -127,18 +127,25 @@ sub _trace_use {
     my($p,$f,$l) = caller(1);
     my $code;
     {
+        ## no critics
         no strict 'refs';
         $code = \@{"::_<$f"};
+        ## use critics
     }
     if(!$code->[$l] || $code->[$l] !~ m/^\s*(use|require)/mxo) {
         return &{$next_require}();
     }
-    my $mod      = {name => $module_name, caller => $f.':'.$l, time => time};
-    my $t0       = [gettimeofday];
-    my $old_lvl  = $cur_lvl;
-    $cur_lvl     = [];
-    my $res      = &{$next_require}();
-    my $elapsed  = tv_interval($t0);
+    my $mod = {
+        package => $p,
+        name    => $module_name,
+        caller  => $f.':'.$l,
+        time    => time
+    };
+    my $t0      = [gettimeofday];
+    my $old_lvl = $cur_lvl;
+    $cur_lvl    = [];
+    my $res     = &{$next_require}();
+    my $elapsed = tv_interval($t0);
     $mod->{'elapsed'} = $elapsed;
     $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
     $cur_lvl          = $old_lvl;
