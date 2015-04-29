@@ -1,0 +1,10 @@
+blib
+\.git
+MANIFEST.bak
+MANIFEST.SKIP
+MYMETA.yml
+MYMETA.json
+pm_to_blib
+^Makefile$
+Makefile.old
+MANIFEST.bak
