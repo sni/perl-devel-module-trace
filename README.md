@@ -29,6 +29,13 @@ Make the module print the results at exit.
   perl -d:Module::Trace=print -MBenchmark -e exit
 ```
 
+### save
+
+Make the module save the results at exit.
+
+```
+  perl -d:Module::Trace="save=/tmp/results.txt" -MBenchmark -e exit
+`
 ### filter
 
 Output filter are defined by the filter option. Multiple filter can be used as comma separated list.
@@ -39,6 +46,8 @@ The generic `perl` filter hides requires like `use 5.008`.
 ```
 
 ## Output
+
+### Ascii Result
 
 The result is printed to STDERR on exit if using the `print` option. You can get
 the raw results at any time with the `Devel::Module::Trace::raw_result` function
@@ -55,6 +64,22 @@ function.
   | 13:41:07.38289 |      Time/HiRes.pm   | 0.000138 | (eval 34)[/usr/share/perl/5.18/Benchmark.pm:454]:2 |
    -------------------------------------------------------------------------------------------------------
 ```
+
+### HTML Result
+
+There is a small script `scripts/devel_module_trace_result_browser.pl`
+available to display the result in a webbrowser from a previous saved result
+file.
+
+The result webserver requires additional modules from CPAN.
+
+```
+  %> perl -d:Module::Trace=save=results.dat -MBenchmark -e exit
+  %> perl ./scripts/devel_module_trace_result_browser.pl results.dat
+  listenting on :3000
+```
+
+You can then view the result with a browser on port 3000.
 
 ## Example
 

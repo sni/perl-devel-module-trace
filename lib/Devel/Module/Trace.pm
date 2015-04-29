@@ -38,6 +38,7 @@ This module traces use/require statements to print the origins of loaded modules
 
 use warnings;
 use strict;
+use Data::Dumper;
 use Devel::OverrideGlobalRequire;
 
 our $VERSION = '0.02';
@@ -52,8 +53,9 @@ BEGIN {
 
 ################################################################################
 $Devel::Module::Trace::print   = 0;
-$Devel::Module::Trace::filter  = [];
-$Devel::Module::Trace::enabled = 0 unless defined $Devel::Module::Trace::enabled;
+$Devel::Module::Trace::filter  = [] unless defined $Devel::Module::Trace::filter;
+$Devel::Module::Trace::enabled = 0  unless defined $Devel::Module::Trace::enabled;
+$Devel::Module::Trace::save    = undef;
 sub import {
     my(undef, @options) = @_;
     for my $option (@options) {
@@ -63,6 +65,9 @@ sub import {
         elsif($option =~ 'filter=(.*)$') {
             my $filter = $1;
             push @{$Devel::Module::Trace::filter}, $filter;
+        }
+        elsif($option =~ 'save=(.*)$') {
+            $Devel::Module::Trace::save = $1;
         } else {
             die("unknown option: ".$option);
         }
@@ -87,6 +92,30 @@ sub raw_result {
 
 ################################################################################
 
+=head2 save
+
+    save(<filename>)
+
+save results to given file
+
+=cut
+sub save {
+    my($file) = @_;
+    my $reenable = 0;
+    if($Devel::Module::Trace::enabled) {
+        _disable();
+        $reenable = 1;
+    }
+    open(my $fh, '>', $file) or die("cannot write to $file: $!");
+    print $fh Dumper(raw_result(), $Devel::Module::Trace::filter);
+    close($fh);
+    print STDERR $file." written\n";
+    _enable() if $reenable;
+    return;
+}
+
+################################################################################
+
 =head2 print_pretty
 
     print_pretty()
@@ -95,13 +124,13 @@ prints the results as ascii table to STDERR.
 
 =cut
 sub print_pretty {
+    my($raw, $indent, $max_module, $max_caller, $max_indent) = @_;
+    $raw         = raw_result() unless $raw;
     my $reenable = 0;
     if($Devel::Module::Trace::enabled) {
         _disable();
         $reenable = 1;
     }
-    my($raw, $indent, $max_module, $max_caller, $max_indent) = @_;
-    $raw    = $modules unless $raw;
     if(!$indent) {
         require POSIX;
         $indent = 0;
@@ -228,6 +257,7 @@ sub _get_max_pp_size {
 ################################################################################
 END {
     print_pretty() if $Devel::Module::Trace::print;
+    save($Devel::Module::Trace::save) if $Devel::Module::Trace::save;
 };
 
 ################################################################################
