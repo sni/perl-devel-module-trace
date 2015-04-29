@@ -5,7 +5,6 @@ package # hide package name from indexer
 sub DB {}
 ## use critic
 
-
 package Devel::Module::Trace;
 
 =head1 NAME
@@ -20,6 +19,7 @@ This module traces use/require statements to print the origins of loaded modules
 
 use warnings;
 use strict;
+use Devel::OverrideGlobalRequire;
 
 our $VERSION = '0.01';
 
@@ -113,27 +113,41 @@ sub print_pretty {
 ################################################################################
 sub _enable {
     $enabled  = 1;
-    *CORE::GLOBAL::require = sub {
-        my @caller  = caller;
-        my $mod     = {name => $_[0], caller => $caller[1].':'.$caller[2], time => time};
-        my $t0      = [gettimeofday];
-        my $old_lvl = $cur_lvl;
-        $cur_lvl    = [];
-        my $res     = CORE::require($_[0]);
-        my $elapsed = tv_interval($t0);
-        $mod->{'elapsed'} = $elapsed;
-        $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
-        $cur_lvl          = $old_lvl;
-        push(@{$cur_lvl}, $mod);
-        return $res;
-    };
+    Devel::OverrideGlobalRequire::override_global_require(\&_trace_use);
     return;
 }
 
 ################################################################################
+sub _trace_use {
+    my($next_require,$module_name) = @_;
+    if(!$enabled) {
+        return &{$next_require}();
+    }
+    my($p,$f,$l) = caller(1);
+    my $code;
+    {
+        no strict 'refs';
+        $code = \@{"::_<$f"};
+    }
+    if($code->[$l] !~ m/^\s*(use|require)/mxo) {
+        return &{$next_require}();
+    }
+    my $mod      = {name => $module_name, caller => $f.':'.$l, time => time};
+    my $t0       = [gettimeofday];
+    my $old_lvl  = $cur_lvl;
+    $cur_lvl     = [];
+    my $res      = &{$next_require}();
+    my $elapsed  = tv_interval($t0);
+    $mod->{'elapsed'} = $elapsed;
+    $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
+    $cur_lvl          = $old_lvl;
+    push(@{$cur_lvl}, $mod);
+    return $res;
+}
+
+################################################################################
 sub _disable {
-    *CORE::GLOBAL::require = *CORE::require;
-    $enabled  = 0;
+    $enabled = 0;
     return;
 }
 

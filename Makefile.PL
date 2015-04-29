@@ -7,6 +7,7 @@ license    'perl';
 repository 'http://github.com/sni/perl-devel-module-trace';
 
 requires 'Time::HiRes';
+requires 'Devel::OverrideGlobalRequire';
 
 build_requires 'Test::More';
 
