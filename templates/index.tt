@@ -28,6 +28,7 @@
       .node_border {
         position: absolute;
         border: 1px solid grey;
+        border-radius: 2px;
       }
       .nodetooltip {
         text-align: left;
@@ -42,6 +43,9 @@
         position: relative;
         margin-right: 5px;
         padding: 0 3px;
+        border: 1px solid grey;
+        top: -1px;
+        border-radius: 2px;
       }
     </style>
   </head>
@@ -54,7 +58,7 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li><a href="#stats">Statistics</a></li>
-        <li><a href="#waterfall">Waterfall</a></li>
+        <li><a href="#timeline">Timeline</a></li>
         <li><a href="#slowest">Slowest Modules</a></li>
         <li><a href="#most-used">Most Used Modules</a></li>
       </ul>
@@ -71,34 +75,25 @@
     <h1>Statistics</h1>
 </div>
 <p>
-  Recorded [% results.size %] module loads from '[% script %]' at [% strftime("%c", start_time) %].<br>
+  Recorded [% timeline.size %] module loads from '[% script %]' at [% strftime("%c", start_time) %].<br>
   Found [% modules.keys.size %] uniq modules which took [% sprintf("%.5f", total_time) %] seconds to load in total.
 </p>
 
 
-<!-- Waterfall -->
-<a name="waterfall"></a>
+<!-- Timeline -->
+<a name="timeline"></a>
 <div class="page-header">
-    <h1>Waterfall</h1>
+    <h1>Timeline</h1>
 </div>
 <p>
   Show in which order the modules have been loaded. The width of the bars reflects the time which the module took to load.<br>
   The x position is the relative time from start. Hover over a bar to get more information.<br><br>
   Legend: <span class="node direct legend">direct dependency</span><span class="node legend">indirect dependency</span><br>
 
-  [% height = 18; width = 1000 %]
-  <div style="position: relative; border: 1px solid grey; width: [% width - 1 %]px; height: [% (results.size * (height - 2)) - 1 %]px;">
-  [% FOREACH r = results %]
-  <span class="node_border" style="width: [% int(width * r.width)  %]px; left: [% int(width * r.offset_x) - 1 %]px; top: [% (loop.index * (height - 2)) - 1 %]px; height: [% ((r.num_childs + 1) * (height - 2)) - 1 %]px;">
-    <span
-      class="node[% IF script == r.caller_f %] direct[% END %]"
-      data-toggle="tooltip"
-      data-placement="bottom"
-      style="width: [% w = int(width * r.width) - 2; IF w < 0; w = 0; END; w %]px; left: 0; top: 0;"
-      title="<table class='nodetooltip'><tr><td>Name:</td><td>[% r.name %]</td></tr><tr><td>Started:</td><td>[% r.human_starttime %]</td></tr><tr><td>Started:</td><td>[% r.human_endtime %]</td></tr><tr><td>Duration:</td><td>[% sprintf('%.5f', r.elapsed) %]s</td></tr><tr><td>Caller:</td><td>[% r.caller %]</td></tr><tr><td># Loaded:</td><td>[% name=r.name; modules.$name.count %]</td></tr><tr><td>Total Duration:</td><td>[% sprintf('%.5f', modules.$name.duration) %]s</td></tr></table>"
-    >[% r.name %]</span>
-  </span>
-  [% END %]
+  <div style="position: relative;">
+  <div style="position: absolute; top: -8px; left: -3px;">0s</div>
+  <div style="position: absolute; top: -8px; right: -3px;" id="endmark">1s</div>
+  <div style="position: relative; border: 1px solid grey; top: 10px;" id="timeline"></div>
   </div>
 </p>
 
@@ -109,21 +104,14 @@
     <h1>Slowest Modules</h1>
 </div>
 <p>
-  <table class="table">
+  Lists the modules ordered by duration.<br>
+  <table class="table" id="slowest-table">
   <tr>
     <th># Loaded</th>
     <th>Module</th>
     <th>Total Duration</th>
     <th>First used in</th>
   </tr>
-  [% FOREACH m = slowest %]
-  <tr>
-    <td>[% m.count %]</td>
-    <td>[% m.name %]</td>
-    <td>[% sprintf('%.5f', m.duration) %]s</td>
-    <td>[% m.first.caller %]</td>
-  </tr>
-  [% END %]
   </table>
 </p>
 
@@ -134,21 +122,14 @@
     <h1>Most Used Modules</h1>
 </div>
 <p>
-  <table class="table">
+  Lists the modules ordered by the times loaded.<br>
+  <table class="table" id="most-table">
   <tr>
     <th># Loaded</th>
     <th>Module</th>
     <th>Total Duration</th>
     <th>First used in</th>
   </tr>
-  [% FOREACH m = most %]
-  <tr>
-    <td>[% m.count %]</td>
-    <td>[% m.name %]</td>
-    <td>[% sprintf('%.5f', m.duration) %]s</td>
-    <td>[% m.first.caller %]</td>
-  </tr>
-  [% END %]
   </table>
 </p>
 
@@ -156,8 +137,81 @@
 </div>
 
 <script type="text/javascript">
-$(document).ready(function(){
+var slowest  = [% json_encode(slowest) %];
+var most     = [% json_encode(most) %];
+var modules  = [% json_encode(modules) %];
+var filter   = [% json_encode(filter) %];
+var timeline = [% json_encode(timeline) %];
+
+function renew_all() {
+    renew_timeline();
+    renew_most_table();
+    renew_slowest_table();
     $('[data-toggle="tooltip"]').tooltip({html: true});
+}
+
+function renew_most_table() {
+    $('#most-table').children('tr:not(:first)').remove();
+    $.each(most, function(i, r) {
+      $('#most-table tr:last').after(
+          '<tr>'
+         +'<td>'+r.count+'</td>'
+         +'<td>'+r.name+'</td>'
+         +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
+         +'<td>'+r.first.caller+'</td>'
+         +'</tr>'
+      );
+    });
+}
+
+function renew_slowest_table() {
+    $('#slowest-table').children('tr:not(:first)').remove();
+    $.each(slowest, function(i, r) {
+      $('#slowest-table tr:last').after(
+          '<tr>'
+         +'<td>'+r.count+'</td>'
+         +'<td>'+r.name+'</td>'
+         +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
+         +'<td>'+r.first.caller+'</td>'
+         +'</tr>'
+      );
+    });
+}
+
+function renew_timeline() {
+    $('#timeline').children().remove();
+    var total_width = $('#timeline').width();
+    var y           = -1;
+    $.each(timeline, function(i, r) {
+      var title = '<table class=\'nodetooltip\'>'
+          +'<tr><td>Name:</td><td>'+r.name+'</td></tr>'
+          +'<tr><td>Started:</td><td>'+r.human_starttime+'</td></tr>'
+          +'<tr><td>Started:</td><td>'+r.human_endtime+'</td></tr>'
+          +'<tr><td>Duration:</td><td>'+Number(r.elapsed).toFixed(5)+'s</td></tr>'
+          +'<tr><td>Caller:</td><td>'+r.caller+'</td></tr>'
+          +'<tr><td># Loaded:</td><td>'+modules[r.name].count+'</td></tr>'
+          +'<tr><td>Total Duration:</td><td>'+Number(modules[r.name].duration).toFixed(5)+'s</td></tr>'
+          +'</table>';
+      var width = Math.floor(total_width*r.width)-2;
+      if(width < 0) { width = 0; }
+      $('#timeline').append(
+        '<span class="node_border" style="width: '+(Math.floor(total_width*r.width))+'px; left: '+(Math.floor(total_width*r.offset_x)-1)+'px; top: '+y+'px; height: 15px;">'
+       +  '<span class="node'+("[% script %]" == r.caller_f ? ' direct' : '')+'"'
+       +  'data-toggle="tooltip"'
+       +  'data-placement="bottom"'
+       +  'style="width: '+width+'px; left: 0; top: 0;"'
+       +  'title="'+title+'"'
+       +  '>'+r.name+'</span>'
+       +'</span>'
+      );
+      y += 14;
+    });
+    $('#timeline').css({height: (y+2)+'px'});
+    $('#endmark').html('[% sprintf('%.4f', total_time) %]s');
+}
+
+$(document).ready(function(){
+    renew_all();
 });
 </script>
   </body>

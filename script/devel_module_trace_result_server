@@ -42,16 +42,21 @@ exit;
 sub _get_output {
     my($data) = _read_results($file);
     my $stash = {
-        'sprintf'    => \&CORE::sprintf,
-        'int'        => \&CORE::int,
-        'strftime'   => sub { return(POSIX::strftime($_[0], localtime($_[1]))) },
-        'script'     => $data->{'script'},
+        'sprintf'     => \&CORE::sprintf,
+        'int'         => \&CORE::int,
+        'strftime'    => sub { return(POSIX::strftime($_[0], localtime($_[1]))) },
+        'json_encode' => sub { return(JSON::XS->new->encode($_[0])) },
+        'script'      => $data->{'script'},
+        'filter'      => $data->{'filter'},
     };
 
     # flatten our result
     $Devel::Module::Trace::filter = $data->{'filter'};
     my $flattened = _filter(_flatten_results($data->{'result'}));
-    $stash->{'results'} = $flattened;
+    for my $mod (@{$flattened}) {
+        delete $mod->{'parent'};
+    }
+    $stash->{'timeline'} = $flattened;
     # calculate percentages
     my $start_time = $flattened->[0]->{'time'};
     my $end_time   = $start_time;
@@ -85,15 +90,22 @@ sub _get_output {
         $most->{$mod->{'name'}}->{'count'}++;
         $most->{$mod->{'name'}}->{'duration'} += $mod->{'elapsed'};
     }
-    $stash->{'most'}    = [sort { $b->{count} <=> $a->{count} } values %{$most}];
+    $stash->{'most'}    = [sort { $b->{count} <=> $a->{count} || $a->{name} cmp $b->{name} } values %{$most}];
     $stash->{'modules'} = $most;
 
     # get slowest used modules
-    $stash->{'slowest'} = [sort { $b->{duration} <=> $a->{duration} } values %{$most}];
+    $stash->{'slowest'} = [sort { $b->{duration} <=> $a->{duration} || $a->{name} cmp $b->{name} } values %{$most}];
 
     my $template = _get_template();
     my $output;
-    my $tt = Template->new();
+    my $author = -f '.author' ? 1 : 0;
+    my $tt = Template->new({
+                  PRE_CHOMP          => 1,
+                  POST_CHOMP         => 1,
+                  TRIM               => 1,
+                  STRICT             => $author ? 1 : 0,
+                  render_die         => 1,
+    });
     $tt->process(\$template, $stash, \$output) || die $tt->error();
     return($output);
 }

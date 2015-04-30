@@ -13,3 +13,4 @@ MANIFEST.bak
 test.pl
 .travis.yml
 templates/
+.author
