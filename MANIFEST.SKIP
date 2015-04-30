@@ -12,3 +12,4 @@ MANIFEST.bak
 \.dat
 test.pl
 .travis.yml
+templates/

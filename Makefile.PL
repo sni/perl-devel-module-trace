@@ -21,4 +21,13 @@ install_script  'devel_module_trace_result_server';
 
 no_index package => 'DB';
 
+makemaker_args(
+    dist => {
+        PREOP => 'rm $(DISTVNAME)/script/devel_module_trace_result_server && \
+	cp -rp script/devel_module_trace_result_server $(DISTVNAME)/script/devel_module_trace_result_server && \
+	cat templates/index.tt >> $(DISTVNAME)/script/devel_module_trace_result_server'
+        #PREOP => 'ls -ila $(DISTVNAME)/script/devel_module_trace_result_server script/devel_module_trace_result_server'
+    },
+);
+
 WriteAll;
