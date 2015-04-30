@@ -25,12 +25,16 @@ my $server = new IO::Socket::INET(Proto     => 'tcp',
 $server or die "Unable to create server socket: $!" ;
 print STDERR "listenting on :$port\n";
 while(my $client = $server->accept()) {
+    $|=1;
     my $output = _get_output();
     $client->autoflush(1);
     print $client "HTTP/1.0 200 OK", Socket::CRLF;
     print $client "Content-type: text/html", Socket::CRLF;
+    print $client "Content-Length: ",length($output), Socket::CRLF;
+    print $client "Cache-Control: no-cache ", Socket::CRLF;
     print $client Socket::CRLF;
     print $client $output;
+    sleep(1);
     close $client;
     exit if $restart;
 }
@@ -104,9 +108,14 @@ sub _flatten_results {
             $mod->{'num_childs'} += scalar @{$subs};
         }
         my($time, $milliseconds) = split(/\./mx, $mod->{'time'});
-        $mod->{'human_time'} =
+        $mod->{'human_starttime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
+        ($time, $milliseconds) = split(/\./mx, ($mod->{'time'}+$mod->{'elapsed'}));
+        $mod->{'human_endtime'} =
+            POSIX::strftime("%H:%M:", localtime($time)).
+            POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
+
     }
     return($flat);
 }
@@ -133,28 +142,93 @@ __DATA__
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Devel::Module::Trace</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css" />
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <style type='text/css'>
       .node {
         white-space: nowrap;
-        height: 20px;
+        height: 13px;
         position: absolute;
-        background: #52C5F6;
+        background: #5bc0de;
+        line-height: 13px;
+        font-size: x-small;
       }
       .node_border {
         position: absolute;
         border: 1px dotted grey;
       }
+      .nodetooltip {
+        text-align: left;
+        white-space: nowrap;
+      }
+      .nodetooltip TD {
+        maring-left: 2px;
+        padding-right: 3px;
+      }
     </style>
   </head>
   <body>
-  <h2>Module Load Order and Duration</h2>
-  [% height = 20; width = 1000 %]
-  <div style="position: relative; border: 1px solid black; height: [% results.size * height %]px; width: [% width %]px;">
-  [% FOREACH r = results %]
-  <div class="node_border" style="width: [% int(width * r.width) %]px; left: [% int(width * r.offset_x) %]px; top: [% loop.index * height %]px; height: [% (r.num_childs + 1) * height %]px;">
-  <div class="node" style="width: [% int(width * r.width) %]px; left: 0; top: 0;" title="Name: [% r.name %]&#013;Started: [% r.human_time %]&#013;Elapsed: [% sprintf("%.5f", r.elapsed) %]s&#013;Package: [% r.package %]&#013;Caller: [% r.caller %]">[% r.name %]</div>
+
+<!-- Navigation -->
+<a name="top"></a>
+<nav class="navbar navbar-default navbar-static-top">
+  <div class="container">
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li><a href="#waterfall">Waterfall</a></li>
+        <li><a href="#most-used">Most Used Modules</a></li>
+        <li><a href="#slowest">Slowest Modules</a></li>
+      </ul>
+    </div>
   </div>
+</nav>
+
+
+<div class="container">
+
+<!-- Waterfall -->
+<a name="waterfall"></a>
+<div class="page-header">
+    <h1>Waterfall</h1>
+</div>
+<p>
+  [% height = 18; width = 1000 %]
+  <div style="position: relative; border: 1px solid grey; width: [% width - 1 %]px; height: [% (results.size * (height - 2)) - 1 %]px;">
+  [% FOREACH r = results %]
+  <span class="node_border" style="width: [% int(width * r.width)  %]px; left: [% int(width * r.offset_x) - 1 %]px; top: [% (loop.index * (height - 2)) - 1 %]px; height: [% ((r.num_childs + 1) * (height - 2)) - 1 %]px;">
+  <span class="node" data-toggle="tooltip" data-placement="bottom" style="width: [% int(width * r.width) - 2 %]px; left: 0; top: 0;" title="<table class='nodetooltip'><tr><td>Name:</td><td>[% r.name %]</td></tr><tr><td>Started:</td><td>[% r.human_starttime %]</td></tr><tr><td>Started:</td><td>[% r.human_endtime %]</td></tr><tr><td>Duration:</td><td>[% sprintf('%.5f', r.elapsed) %]s</td></tr><tr><td>Package:</td><td>[% r.package %]</td></tr><tr><td>Caller:</td><td>[% r.caller %]</td></tr></table>">[% r.name %]</span>
+  </span>
   [% END %]
   </div>
+</p>
+
+
+<!-- Most Used -->
+<a name="most-used"></a>
+<div class="page-header">
+    <h1>Most Used Modules</h1>
+</div>
+<p>
+</p>
+
+
+<!-- Slowest Modules -->
+<a name="slowest"></a>
+<div class="page-header">
+    <h1>Slowest Modules</h1>
+</div>
+<p>
+</p>
+
+
+</div>
+
+<script type="text/javascript">
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip({html: true});
+});
+</script>
   </body>
 </html>
