@@ -1,5 +1,23 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+devel_module_trace_result_server - webserver daemon to present result in html
+
+=head1 DESCRIPTION
+
+This script runs a webserver to present the result as web page.
+
+=head1 SYNOPSIS
+
+=over 4
+
+  devel_module_trace_result_server <result file>
+
+=back
+
+=cut
+
 use warnings;
 use strict;
 use POSIX;
@@ -147,11 +165,13 @@ sub _read_results {
     my $content = "";
     while(<$fh>) { $content .= $_; }
     close($fh);
-    if($content !~ m/^\$VAR1/) {
+    if($content !~ m/^\$VAR1/mx) {
         die("unknown result file format");
     }
     my($VAR1);
+    ## no critic
     eval($content);
+    ## use critic
     die($@) if($@);
     return($VAR1);
 }

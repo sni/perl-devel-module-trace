@@ -22,7 +22,7 @@ if ( $EVAL_ERROR ) {
 
 eval "use Test::Pod::Coverage 1.00";
 
-my @modules = all_modules('lib');
+my @modules = all_modules('lib', 'script');
 for my $module (@modules) {
     # check module and skip UPPERCASE constants which are reported as fail
     pod_coverage_ok( $module, { also_private => [ qr/^[A-Z_]+$/ ]} );

@@ -6,7 +6,7 @@ use Data::Dumper;
 plan skip_all => 'Author test. Set $ENV{TEST_AUTHOR} to a true value to run.' unless $ENV{TEST_AUTHOR};
 
 my $cmds = {
-  "grep -nr 'print STDERR Dumper' lib/" => {},
+  "grep -nr 'print STDERR Dumper' lib/ script/" => {},
 };
 
 # find all missed debug outputs

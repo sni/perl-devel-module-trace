@@ -67,13 +67,13 @@ function.
 
 ### HTML Result
 
-There is a small script `scripts/devel_module_trace_result_browser.pl`
+There is a small script `script/devel_module_trace_result_server`
 available to display the result in a webbrowser from a previous saved result
 file.
 
 ```
   %> perl -d:Module::Trace=save=results.dat -MBenchmark -e exit
-  %> perl ./scripts/devel_module_trace_result_browser.pl results.dat
+  %> perl ./script/devel_module_trace_result_server results.dat
   [Thu Apr 30 14:49:02 2015] [info] Listening at "http://*:3000".
   Server available at http://127.0.0.1:3000.
 ```
