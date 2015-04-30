@@ -22,16 +22,17 @@ exit;
 ################################################################################
 # read result file
 sub _get_output {
-    my($result, $filter) = _read_results($file);
+    my($data) = _read_results($file);
     my $stash = {
         'sprintf'    => \&CORE::sprintf,
         'int'        => \&CORE::int,
         'strftime'   => sub { return(POSIX::strftime($_[0], localtime($_[1]))) },
+        'script'     => $data->{'script'},
     };
 
     # flatten our result
-    $Devel::Module::Trace::filter = $filter;
-    my $flattened = _filter(_flatten_results($result));
+    $Devel::Module::Trace::filter = $data->{'filter'};
+    my $flattened = _filter(_flatten_results($data->{'result'}));
     $stash->{'results'} = $flattened;
     # calculate percentages
     my $start_time = $flattened->[0]->{'time'};
@@ -149,10 +150,10 @@ sub _read_results {
     if($content !~ m/^\$VAR1/) {
         die("unknown result file format");
     }
-    my($VAR1, $VAR2);
+    my($VAR1);
     eval($content);
     die($@) if($@);
-    return($VAR1, $VAR2);
+    return($VAR1);
 }
 
 ################################################################################

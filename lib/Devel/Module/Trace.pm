@@ -109,7 +109,11 @@ save results to given file
 sub save {
     my($file) = @_;
     open(my $fh, '>', $file) or die("cannot write to $file: $!");
-    print $fh Dumper(raw_result(), $Devel::Module::Trace::filter);
+    print $fh Dumper({
+        result => raw_result(),
+        filter => $Devel::Module::Trace::filter,
+        script => $0,
+    });
     close($fh);
     print STDERR $file." written\n";
     return;
@@ -190,10 +194,12 @@ sub _trace_use {
         return &{$next_require}();
     }
     my $mod = {
-        package => $p,
-        name    => $module_name,
-        caller  => $f.':'.$l,
-        time    => time
+        package  => $p,
+        name     => $module_name,
+        caller   => $f.':'.$l,
+        caller_f => $f,
+        caller_l => $l,
+        time     => time
     };
     my $t0      = [gettimeofday];
     my $old_lvl = $cur_lvl;

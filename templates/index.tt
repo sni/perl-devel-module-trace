@@ -22,6 +22,9 @@
         line-height: 13px;
         font-size: x-small;
       }
+      .node.direct {
+        background: #4cae4c;
+      }
       .node_border {
         position: absolute;
         border: 1px dotted grey;
@@ -33,6 +36,12 @@
       .nodetooltip TD {
         maring-left: 2px;
         padding-right: 3px;
+      }
+      .legend {
+        height: 20px;
+        position: relative;
+        margin-right: 5px;
+        padding: 0 3px;
       }
     </style>
   </head>
@@ -62,7 +71,8 @@
     <h1>Statistics</h1>
 </div>
 <p>
-  Loaded [% modules.keys.size %] different modules in [% sprintf("%.5f", total_time) %] seconds.
+  Recorded [% results.size %] module loads from '[% script %]' at [% strftime("%c", start_time) %].<br>
+  Found [% modules.keys.size %] uniq modules which took [% sprintf("%.5f", total_time) %] seconds to load in total.
 </p>
 
 
@@ -72,12 +82,14 @@
     <h1>Waterfall</h1>
 </div>
 <p>
+  Show in which order the modules have been loaded. The width of the bars reflects the time which the module took to load. The x position is the relative time from start.<br>
+  <span class="node direct legend">direct dependency</span><span class="node legend">indirect dependency</span><br>
   [% height = 18; width = 1000 %]
   <div style="position: relative; border: 1px solid grey; width: [% width - 1 %]px; height: [% (results.size * (height - 2)) - 1 %]px;">
   [% FOREACH r = results %]
   <span class="node_border" style="width: [% int(width * r.width)  %]px; left: [% int(width * r.offset_x) - 1 %]px; top: [% (loop.index * (height - 2)) - 1 %]px; height: [% ((r.num_childs + 1) * (height - 2)) - 1 %]px;">
     <span
-      class="node"
+      class="node[% IF script == r.caller_f %] direct[% END %]"
       data-toggle="tooltip"
       data-placement="bottom"
       style="width: [% w = int(width * r.width) - 2; IF w < 0; w = 0; END; w %]px; left: 0; top: 0;"
