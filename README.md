@@ -71,15 +71,14 @@ There is a small script `scripts/devel_module_trace_result_browser.pl`
 available to display the result in a webbrowser from a previous saved result
 file.
 
-The result webserver requires additional modules from CPAN.
-
 ```
   %> perl -d:Module::Trace=save=results.dat -MBenchmark -e exit
   %> perl ./scripts/devel_module_trace_result_browser.pl results.dat
-  listenting on :3000
+  [Thu Apr 30 14:49:02 2015] [info] Listening at "http://*:3000".
+  Server available at http://127.0.0.1:3000.
 ```
 
-You can then view the result with a browser on port 3000.
+You can then view the result with a browser.
 
 ## Example
 
