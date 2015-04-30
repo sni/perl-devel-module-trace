@@ -39,28 +39,35 @@ This module traces use/require statements to print the origins of loaded modules
 use warnings;
 use strict;
 use Data::Dumper;
+use POSIX;
 use Devel::OverrideGlobalRequire;
 
 our $VERSION = '0.02';
 
 ################################################################################
-my $modules = [];
-my $cur_lvl = $modules;
+$Devel::Module::Trace::modules = [] unless defined $Devel::Module::Trace::modules;
+my $cur_lvl = $Devel::Module::Trace::modules;
 BEGIN {
     use Time::HiRes qw/gettimeofday tv_interval time/;
     $^P = $^P | 0x400; # Save source code lines, see perldoc perlvar
 };
 
 ################################################################################
-$Devel::Module::Trace::print   = 0;
-$Devel::Module::Trace::filter  = [] unless defined $Devel::Module::Trace::filter;
-$Devel::Module::Trace::enabled = 0  unless defined $Devel::Module::Trace::enabled;
-$Devel::Module::Trace::save    = undef;
+BEGIN {
+    $Devel::Module::Trace::print     = 0 unless defined $Devel::Module::Trace::print;
+    $Devel::Module::Trace::filter    = [] unless defined $Devel::Module::Trace::filter;
+    $Devel::Module::Trace::enabled   = 0  unless defined $Devel::Module::Trace::enabled;
+    $Devel::Module::Trace::save      = undef unless defined $Devel::Module::Trace::save;
+    $Devel::Module::Trace::autostart = 1 unless defined $Devel::Module::Trace::autostart;
+}
 sub import {
     my(undef, @options) = @_;
     for my $option (@options) {
         if($option eq 'print') {
             $Devel::Module::Trace::print = 1;
+        }
+        elsif($option eq 'noautostart') {
+            $Devel::Module::Trace::autostart = 0;
         }
         elsif($option =~ 'filter=(.*)$') {
             my $filter = $1;
@@ -87,7 +94,7 @@ returns an array with the raw result list.
 
 =cut
 sub raw_result {
-    return($modules);
+    return($Devel::Module::Trace::modules);
 }
 
 ################################################################################
@@ -101,16 +108,10 @@ save results to given file
 =cut
 sub save {
     my($file) = @_;
-    my $reenable = 0;
-    if($Devel::Module::Trace::enabled) {
-        _disable();
-        $reenable = 1;
-    }
     open(my $fh, '>', $file) or die("cannot write to $file: $!");
     print $fh Dumper(raw_result(), $Devel::Module::Trace::filter);
     close($fh);
     print STDERR $file." written\n";
-    _enable() if $reenable;
     return;
 }
 
@@ -125,17 +126,11 @@ prints the results as ascii table to STDERR.
 =cut
 sub print_pretty {
     my($raw, $indent, $max_module, $max_caller, $max_indent) = @_;
-    $raw         = raw_result() unless $raw;
-    my $reenable = 0;
-    if($Devel::Module::Trace::enabled) {
-        _disable();
-        $reenable = 1;
-    }
+    $raw = raw_result() unless $raw;
     if(!$indent) {
-        require POSIX;
         $indent = 0;
         # get max caller and module
-        ($max_module, $max_caller) = _get_max_pp_size($modules, 0, 0, 0);
+        ($max_module, $max_caller) = _get_max_pp_size(raw_result(), 0, 0, 0);
         return if $max_module == 0;
         print " ","-"x($max_module+$max_caller+34), "\n" if $indent == 0;
     }
@@ -155,7 +150,6 @@ sub print_pretty {
         }
     }
     print " ","-"x($max_module+$max_caller+34), "\n" if $indent == 0;
-    _enable() if $reenable;
     return;
 }
 
@@ -221,7 +215,7 @@ sub _disable {
 
 ################################################################################
 BEGIN {
-    _enable();
+    _enable() if $Devel::Module::Trace::autostart;
 };
 
 ################################################################################

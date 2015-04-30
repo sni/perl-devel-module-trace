@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Devel::Module::Trace</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css" />
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <style type='text/css'>
+      BODY {
+        padding-top: 25px;
+      }
+      TABLE.table TD, TABLE.table TH {
+        white-space: nowrap;
+      }
+      .node {
+        white-space: nowrap;
+        height: 13px;
+        position: absolute;
+        background: #5bc0de;
+        line-height: 13px;
+        font-size: x-small;
+      }
+      .node_border {
+        position: absolute;
+        border: 1px dotted grey;
+      }
+      .nodetooltip {
+        text-align: left;
+        white-space: nowrap;
+      }
+      .nodetooltip TD {
+        maring-left: 2px;
+        padding-right: 3px;
+      }
+    </style>
+  </head>
+  <body>
+
+<!-- Navigation -->
+<a name="top"></a>
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container">
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li><a href="#stats">Statistics</a></li>
+        <li><a href="#waterfall">Waterfall</a></li>
+        <li><a href="#slowest">Slowest Modules</a></li>
+        <li><a href="#most-used">Most Used Modules</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+<div class="container">
+
+<!-- Statistics -->
+<a name="stats"></a>
+<div class="page-header">
+    <h1>Statistics</h1>
+</div>
+<p>
+  Loaded [% modules.keys.size %] different modules in [% sprintf("%.5f", total_time) %] seconds.
+</p>
+
+
+<!-- Waterfall -->
+<a name="waterfall"></a>
+<div class="page-header">
+    <h1>Waterfall</h1>
+</div>
+<p>
+  [% height = 18; width = 1000 %]
+  <div style="position: relative; border: 1px solid grey; width: [% width - 1 %]px; height: [% (results.size * (height - 2)) - 1 %]px;">
+  [% FOREACH r = results %]
+  <span class="node_border" style="width: [% int(width * r.width)  %]px; left: [% int(width * r.offset_x) - 1 %]px; top: [% (loop.index * (height - 2)) - 1 %]px; height: [% ((r.num_childs + 1) * (height - 2)) - 1 %]px;">
+    <span
+      class="node"
+      data-toggle="tooltip"
+      data-placement="bottom"
+      style="width: [% w = int(width * r.width) - 2; IF w < 0; w = 0; END; w %]px; left: 0; top: 0;"
+      title="<table class='nodetooltip'><tr><td>Name:</td><td>[% r.name %]</td></tr><tr><td>Started:</td><td>[% r.human_starttime %]</td></tr><tr><td>Started:</td><td>[% r.human_endtime %]</td></tr><tr><td>Duration:</td><td>[% sprintf('%.5f', r.elapsed) %]s</td></tr><tr><td>Caller:</td><td>[% r.caller %]</td></tr><tr><td># Loaded:</td><td>[% name=r.name; modules.$name.count %]</td></tr><tr><td>Total Duration:</td><td>[% sprintf('%.5f', modules.$name.duration) %]s</td></tr></table>"
+    >[% r.name %]</span>
+  </span>
+  [% END %]
+  </div>
+</p>
+
+
+<!-- Slowest Modules -->
+<a name="slowest"></a>
+<div class="page-header">
+    <h1>Slowest Modules</h1>
+</div>
+<p>
+  <table class="table">
+  <tr>
+    <th># Loaded</th>
+    <th>Module</th>
+    <th>Total Duration</th>
+    <th>First used in</th>
+  </tr>
+  [% FOREACH m = slowest %]
+  <tr>
+    <td>[% m.count %]</td>
+    <td>[% m.name %]</td>
+    <td>[% sprintf('%.5f', m.duration) %]s</td>
+    <td>[% m.first.caller %]</td>
+  </tr>
+  [% END %]
+  </table>
+</p>
+
+
+<!-- Most Used -->
+<a name="most-used"></a>
+<div class="page-header">
+    <h1>Most Used Modules</h1>
+</div>
+<p>
+  <table class="table">
+  <tr>
+    <th># Loaded</th>
+    <th>Module</th>
+    <th>Total Duration</th>
+    <th>First used in</th>
+  </tr>
+  [% FOREACH m = most %]
+  <tr>
+    <td>[% m.count %]</td>
+    <td>[% m.name %]</td>
+    <td>[% sprintf('%.5f', m.duration) %]s</td>
+    <td>[% m.first.caller %]</td>
+  </tr>
+  [% END %]
+  </table>
+</p>
+
+
+</div>
+
+<script type="text/javascript">
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip({html: true});
+});
+</script>
+  </body>
+</html>
