@@ -1,0 +1,6 @@
+language: perl
+perl:
+  - "5.14"
+notifications:
+  email:
+    - sven@nierlein.de

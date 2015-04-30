@@ -11,3 +11,4 @@ MANIFEST.bak
 \.gz
 \.dat
 test.pl
+.travis.yml
