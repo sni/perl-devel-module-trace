@@ -3,8 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Devel::Module::Trace</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css" />
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
     <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <style type='text/css'>
@@ -75,7 +75,7 @@
     <h1>Statistics</h1>
 </div>
 <p>
-  Recorded [% timeline.size %] module loads from '[% script %]' at [% strftime("%c", start_time) %].<br>
+  Recorded [% timeline.size %] module loads from '[% script %]' at [% strftime("%c", start_time) %].<br />
   Found [% modules.keys.size %] uniq modules which took [% sprintf("%.5f", total_time) %] seconds to load in total.
 </p>
 
@@ -86,9 +86,9 @@
     <h1>Timeline</h1>
 </div>
 <p>
-  Show in which order the modules have been loaded. The width of the bars reflects the time which the module took to load.<br>
-  The x position is the relative time from start. Hover over a bar to get more information.<br><br>
-  Legend: <span class="node direct legend">direct dependency</span><span class="node legend">indirect dependency</span><br>
+  Show in which order the modules have been loaded. The width of the bars reflects the time which the module took to load.<br />
+  The x position is the relative time from start. Hover over a bar to get more information.<br /><br />
+  Legend: <span class="node direct legend">direct dependency</span><span class="node legend">indirect dependency</span><br />
 
   <div style="position: relative;">
   <div style="position: absolute; top: -8px; left: -3px;">0s</div>
@@ -104,7 +104,7 @@
     <h1>Slowest Modules</h1>
 </div>
 <p>
-  Lists the modules ordered by duration.<br>
+  Lists the modules ordered by duration.<br />
   <table class="table" id="slowest-table">
   <tr>
     <th># Loaded</th>
@@ -122,7 +122,7 @@
     <h1>Most Used Modules</h1>
 </div>
 <p>
-  Lists the modules ordered by the times loaded.<br>
+  Lists the modules ordered by the times loaded.<br />
   <table class="table" id="most-table">
   <tr>
     <th># Loaded</th>
@@ -143,6 +143,7 @@ var modules  = [% json_encode(modules) %];
 var filter   = [% json_encode(filter) %];
 var timeline = [% json_encode(timeline) %];
 
+/* redraw all dynamic tables and graphs */
 function renew_all() {
     renew_timeline();
     renew_most_table();
@@ -150,9 +151,11 @@ function renew_all() {
     $('[data-toggle="tooltip"]').tooltip({html: true});
 }
 
+/* redraw the most used table */
 function renew_most_table() {
     $('#most-table').children('tr:not(:first)').remove();
     $.each(most, function(i, r) {
+      if(isFiltered(r)) { return; }
       $('#most-table tr:last').after(
           '<tr>'
          +'<td>'+r.count+'</td>'
@@ -164,9 +167,11 @@ function renew_most_table() {
     });
 }
 
+/* redraw the slowest modules table */
 function renew_slowest_table() {
     $('#slowest-table').children('tr:not(:first)').remove();
     $.each(slowest, function(i, r) {
+      if(isFiltered(r)) { return; }
       $('#slowest-table tr:last').after(
           '<tr>'
          +'<td>'+r.count+'</td>'
@@ -178,11 +183,13 @@ function renew_slowest_table() {
     });
 }
 
+/* redraw the timeline graph */
 function renew_timeline() {
     $('#timeline').children().remove();
     var total_width = $('#timeline').width();
     var y           = -1;
     $.each(timeline, function(i, r) {
+      if(isFiltered(r)) { return; }
       var title = '<table class=\'nodetooltip\'>'
           +'<tr><td>Name:</td><td>'+r.name+'</td></tr>'
           +'<tr><td>Started:</td><td>'+r.human_starttime+'</td></tr>'
@@ -208,6 +215,22 @@ function renew_timeline() {
     });
     $('#timeline').css({height: (y+2)+'px'});
     $('#endmark').html('[% sprintf('%.4f', total_time) %]s');
+}
+
+/* return true if given module matches a filter */
+function isFiltered(mod) {
+    var found = false;
+    $.each(filter, function(i, f) {
+        if(mod.name.match(f)) {
+            found = true;
+            return false;
+        }
+        if(f == 'perl' && mod.name.match(/^[\d\.]+$/)) {
+            found = true;
+            return false;
+        }
+    });
+    return(found);
 }
 
 $(document).ready(function(){
