@@ -31,11 +31,12 @@ Make the module print the results at exit.
 
 ### save
 
-Make the module save the results at exit.
+Make the module save the results at exit. Use this save file as input for the result server.
 
 ```
   perl -d:Module::Trace="save=/tmp/results.txt" -MBenchmark -e exit
-`
+```
+
 ### filter
 
 Output filter are defined by the filter option. Multiple filter can be used as comma separated list.
