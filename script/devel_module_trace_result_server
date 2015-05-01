@@ -20,22 +20,33 @@ This script runs a webserver to present the result as web page.
 
 use warnings;
 use strict;
+
+my $file   = $ARGV[0] or die("usage: $0 <result file>");
+my $mode   = $ARGV[1] || 'daemon';
+my $server = Devel::Module::Trace::ResultServer->_start($file, $mode);
+exit;
+
+################################################################################
+package Devel::Module::Trace::ResultServer;
+
+use warnings;
+use strict;
 use POSIX;
 use Template;
 use Mojolicious::Lite;
 use JSON::XS;
 use Data::Dumper;
 
-my $file = $ARGV[0] or die("usage: $0 <result file>");
-
 ################################################################################
-get '/' => sub {
-  my $c   = shift;
-  $c->render(text => _get_output());
-};
-app->start('daemon');
-exit;
-
+sub _start {
+    my($self, $file, $mode) = @_;
+    get '/' => sub {
+      my $c   = shift;
+      $c->render(text => _get_output());
+    };
+    app->start($mode);
+    exit;
+}
 
 ################################################################################
 # read result file
