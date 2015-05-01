@@ -42,22 +42,25 @@ use Data::Dumper;
 use POSIX;
 use Devel::OverrideGlobalRequire;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 ################################################################################
 BEGIN {
     use Time::HiRes qw/gettimeofday tv_interval time/;
     $^P = $^P | 0x400; # Save source code lines, see perldoc perlvar
 
-    $Devel::Module::Trace::modules   = [] unless defined $Devel::Module::Trace::modules;
+    #$Devel::Module::Trace::modules   = [] unless defined $Devel::Module::Trace::modules;
     $Devel::Module::Trace::count     = 0  unless defined $Devel::Module::Trace::count;
     $Devel::Module::Trace::print     = 0  unless defined $Devel::Module::Trace::print;
     $Devel::Module::Trace::filter    = [] unless defined $Devel::Module::Trace::filter;
     $Devel::Module::Trace::enabled   = 0  unless defined $Devel::Module::Trace::enabled;
     $Devel::Module::Trace::save      = 0  unless defined $Devel::Module::Trace::save;
     $Devel::Module::Trace::autostart = 1  unless defined $Devel::Module::Trace::autostart;
+    $Devel::Module::Trace::all       = [] unless defined $Devel::Module::Trace::all;
+    $Devel::Module::Trace::nested    = 0  unless defined $Devel::Module::Trace::nested;
 }
-my $cur_lvl = $Devel::Module::Trace::modules;
+my $cur_parent;
+my $indent = 4;
 
 ################################################################################
 sub import {
@@ -95,7 +98,7 @@ returns an array with the raw result list.
 
 =cut
 sub raw_result {
-    return($Devel::Module::Trace::modules);
+    return($Devel::Module::Trace::all);
 }
 
 ################################################################################
@@ -110,6 +113,8 @@ save results to given file
 sub save {
     my($file) = @_;
     open(my $fh, '>', $file) or die("cannot write to $file: $!");
+    $Data::Dumper::Indent = 1;
+    $Data::Dumper::Purity = 1;
     print $fh Dumper({
         result => raw_result(),
         filter => $Devel::Module::Trace::filter,
@@ -130,19 +135,17 @@ prints the results as ascii table to STDERR.
 
 =cut
 sub print_pretty {
-    my($raw, $indent, $max_module, $max_caller, $max_indent) = @_;
+    my($raw) = @_;
     $raw = raw_result() unless $raw;
-    if(!$indent) {
-        $indent = 0;
-        # get max caller and module
-        ($max_module, $max_caller) = _get_max_pp_size(raw_result(), 0, 0, 0);
-        return if $max_module == 0;
-        print " ","-"x($max_module+$max_caller+34), "\n" if $indent == 0;
-    }
+    # get max caller and module
+    my($max_module, $max_caller) = _get_max_pp_size(raw_result());
+    return if $max_module == 0;
+    print " ","-"x($max_module+$max_caller+34), "\n";
     for my $mod (@{$raw}) {
         next if _filtered($mod->{'name'});
         my($time, $milliseconds) = split(/\./mx, $mod->{'time'});
-        printf(STDERR "| %s%08.5f | %-".$indent."s %-".($max_module-$indent)."s | %.6f | %-".$max_caller."s |\n",
+        my $spaces = $mod->{'level'}*$indent;
+        printf(STDERR "| %s%08.5f | %-".($spaces)."s %-".($max_module-$spaces)."s | %.6f | %-".$max_caller."s |\n",
                     POSIX::strftime("%H:%M:", localtime($time)),
                     POSIX::strftime("%S", localtime($time)).'.'.$milliseconds,
                     "",
@@ -150,11 +153,8 @@ sub print_pretty {
                     $mod->{'elapsed'},
                     $mod->{'caller'},
         );
-        if($mod->{'sub'}) {
-            print_pretty($mod->{'sub'}, $indent+4, $max_module, $max_caller, $max_indent);
-        }
     }
-    print " ","-"x($max_module+$max_caller+34), "\n" if $indent == 0;
+    print " ","-"x($max_module+$max_caller+34), "\n";
     return;
 }
 
@@ -200,22 +200,28 @@ sub _trace_use {
         return &{$next_require}();
     }
     my $mod = {
-        package  => $p,
-        name     => $module_name,
-        caller   => $f.':'.$l,
-        caller_f => $f,
-        caller_l => $l,
-        time     => time
+        'package'  => $p,
+        'name'     => $module_name,
+        'caller'   => $f.':'.$l,
+        'caller_f' => $f,
+        'caller_l' => $l,
+        'time'     => time,
+        'level'    => $Devel::Module::Trace::nested,
     };
-    my $t0      = [gettimeofday];
-    my $old_lvl = $cur_lvl;
-    $cur_lvl    = [];
-    my $res     = &{$next_require}();
-    my $elapsed = tv_interval($t0);
+    if($cur_parent) {
+        $cur_parent->{'sub'} = [] unless defined $cur_parent->{'sub'};
+        push(@{$cur_parent->{'sub'}}, $mod);
+        $mod->{'parent'} = $cur_parent;
+    }
+    push(@{$Devel::Module::Trace::all}, $mod);
+    $Devel::Module::Trace::nested++;
+    $cur_parent       = $mod;
+    my $t0            = [gettimeofday];
+    my $res           = &{$next_require}();
+    my $elapsed       = tv_interval($t0);
     $mod->{'elapsed'} = $elapsed;
-    $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
-    $cur_lvl          = $old_lvl;
-    push(@{$cur_lvl}, $mod);
+    $Devel::Module::Trace::nested--;
+    $cur_parent       = $mod->{'parent'};
     $Devel::Module::Trace::count++;
     return $res;
 }
@@ -247,16 +253,14 @@ sub _filtered {
 
 ################################################################################
 sub _get_max_pp_size {
-    my($mods, $max_module, $max_caller, $cur_indent) = @_;
+    my($mods) = @_;
+    my($max_module, $max_caller) = (0,0);
     for my $mod (@{$mods}) {
         next if _filtered($mod);
-        my $l1 = length($mod->{'name'}) + $cur_indent;
+        my $l1 = length($mod->{'name'}) + ($mod->{'level'} * $indent);
         my $l2 = length($mod->{'caller'});
         $max_module = $l1 if $max_module < $l1;
         $max_caller = $l2 if $max_caller < $l2;
-        if($mod->{'sub'}) {
-            ($max_module, $max_caller) = _get_max_pp_size($mod->{'sub'}, $max_module, $max_caller, $cur_indent+4);
-        }
     }
     return($max_module, $max_caller);
 }

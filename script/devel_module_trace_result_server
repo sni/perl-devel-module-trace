@@ -24,6 +24,7 @@ use POSIX;
 use Template;
 use Mojolicious::Lite;
 use JSON::XS;
+use Data::Dumper;
 
 my $file = $ARGV[0] or die("usage: $0 <result file>");
 
@@ -49,16 +50,13 @@ sub _get_output {
         'filter'      => $data->{'filter'},
     };
 
-    # flatten our result
-    my $flattened = _flatten_results($data->{'result'});
-    for my $mod (@{$flattened}) {
-        delete $mod->{'parent'};
-    }
-    $stash->{'timeline'} = $flattened;
+    # clean parents from our result
+    my $results = _clean_results($data->{'result'});
+    $stash->{'timeline'} = $results;
     # calculate percentages
-    my $start_time = $flattened->[0]->{'time'};
+    my $start_time = $results->[0]->{'time'};
     my $end_time   = $start_time;
-    for my $mod (@{$flattened}) {
+    for my $mod (@{$results}) {
         my $end = $mod->{'time'} + $mod->{'elapsed'};
         if($end > $end_time) { $end_time = $end; }
     }
@@ -66,14 +64,14 @@ sub _get_output {
     $stash->{'start_time'} = $start_time;
     $stash->{'end_time'}   = $end_time;
     $stash->{'total_time'} = $total_time;
-    for my $mod (@{$flattened}) {
+    for my $mod (@{$results}) {
         $mod->{'offset_x'} = ($mod->{'time'} - $start_time) / $total_time;
         $mod->{'width'}    = $mod->{'elapsed'} / $total_time;
     }
 
     # get most used modules
     my $most = {};
-    for my $mod (@{$flattened}) {
+    for my $mod (@{$results}) {
         if(!defined $most->{$mod->{'name'}}) {
             $most->{$mod->{'name'}} = {
                 name     => $mod->{'name'},
@@ -109,20 +107,18 @@ sub _get_output {
 }
 
 ################################################################################
-sub _flatten_results {
+sub _clean_results {
     my($mods) = @_;
     my $flat = [];
     for my $mod (@{$mods}) {
-        $mod->{'num_childs'} = 0 unless $mod->{'num_childs'};
-        push @{$flat}, $mod;
-        if($mod->{'sub'}) {
-            for my $submod (@{$mod->{'sub'}}) {
-                $submod->{'parent'} = $mod;
-            }
-            my $subs = _flatten_results($mod->{'sub'});
-            push @{$flat}, @{$subs};
-            $mod->{'num_childs'} += scalar @{$subs};
+        delete $mod->{'parent'};
+        if(!exists $mod->{'elapsed'}) {
+            my $subs          = delete $mod->{'sub'};
+            print STDERR "WARNING: no elapsed time in ",Dumper($mod);
+            $mod->{'sub'}     = $subs;
+            $mod->{'elapsed'} = 0;
         }
+        push @{$flat}, $mod;
         my($time, $milliseconds) = split(/\./mx, $mod->{'time'});
         $mod->{'human_starttime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
@@ -131,7 +127,6 @@ sub _flatten_results {
         $mod->{'human_endtime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
-
     }
     return($flat);
 }
