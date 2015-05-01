@@ -45,21 +45,21 @@ use Devel::OverrideGlobalRequire;
 our $VERSION = '0.02';
 
 ################################################################################
-$Devel::Module::Trace::modules = [] unless defined $Devel::Module::Trace::modules;
-my $cur_lvl = $Devel::Module::Trace::modules;
 BEGIN {
     use Time::HiRes qw/gettimeofday tv_interval time/;
     $^P = $^P | 0x400; # Save source code lines, see perldoc perlvar
-};
 
-################################################################################
-BEGIN {
-    $Devel::Module::Trace::print     = 0 unless defined $Devel::Module::Trace::print;
+    $Devel::Module::Trace::modules   = [] unless defined $Devel::Module::Trace::modules;
+    $Devel::Module::Trace::count     = 0  unless defined $Devel::Module::Trace::count;
+    $Devel::Module::Trace::print     = 0  unless defined $Devel::Module::Trace::print;
     $Devel::Module::Trace::filter    = [] unless defined $Devel::Module::Trace::filter;
     $Devel::Module::Trace::enabled   = 0  unless defined $Devel::Module::Trace::enabled;
-    $Devel::Module::Trace::save      = undef unless defined $Devel::Module::Trace::save;
-    $Devel::Module::Trace::autostart = 1 unless defined $Devel::Module::Trace::autostart;
+    $Devel::Module::Trace::save      = 0  unless defined $Devel::Module::Trace::save;
+    $Devel::Module::Trace::autostart = 1  unless defined $Devel::Module::Trace::autostart;
 }
+my $cur_lvl = $Devel::Module::Trace::modules;
+
+################################################################################
 sub import {
     my(undef, @options) = @_;
     for my $option (@options) {
@@ -79,6 +79,7 @@ sub import {
             die("unknown option: ".$option);
         }
     }
+    _enable() if $Devel::Module::Trace::autostart;
     return;
 }
 
@@ -115,7 +116,7 @@ sub save {
         script => $0,
     });
     close($fh);
-    print STDERR $file." written\n";
+    print STDERR $Devel::Module::Trace::count." modules written to ".$file."\n";
     return;
 }
 
@@ -160,7 +161,12 @@ sub print_pretty {
 ################################################################################
 sub _enable {
     $Devel::Module::Trace::enabled = 1;
+    # prevent adding it twice which results in endless recursion
+    if($Devel::Module::Trace::subref && $Devel::Module::Trace::subref eq "".\&{*CORE::GLOBAL::require}) {
+        return;
+    }
     Devel::OverrideGlobalRequire::override_global_require(\&_trace_use);
+    $Devel::Module::Trace::subref = "".\&{*CORE::GLOBAL::require};
     return;
 }
 
@@ -210,6 +216,7 @@ sub _trace_use {
     $mod->{'sub'}     = $cur_lvl if scalar @{$cur_lvl};
     $cur_lvl          = $old_lvl;
     push(@{$cur_lvl}, $mod);
+    $Devel::Module::Trace::count++;
     return $res;
 }
 
@@ -263,10 +270,6 @@ END {
 ################################################################################
 
 1;
-
-=head1 TODO
-
-    * add waterfall charts output
 
 =head1 REPOSITORY
 
