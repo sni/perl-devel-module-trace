@@ -233,8 +233,16 @@ function isFiltered(mod) {
     return(found);
 }
 
+var renewTimer;
 $(document).ready(function(){
     renew_all();
+
+    $(window).resize(function() {
+        window.clearTimeout(renewTimer);
+        renewTimer = window.setTimeout(function() {
+            renew_all();
+        },150);
+    });
 });
 </script>
   </body>
