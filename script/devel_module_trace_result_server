@@ -123,11 +123,11 @@ sub _clean_results {
             $mod->{'elapsed'} = 0;
         }
         push @{$flat}, $mod;
-        my($time, $milliseconds) = split(/\./mx, $mod->{'time'});
+        my($time, $milliseconds) = split(/\./mxo, $mod->{'time'});
         $mod->{'human_starttime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
-        ($time, $milliseconds) = split(/\./mx, ($mod->{'time'}+$mod->{'elapsed'}));
+        ($time, $milliseconds) = split(/\./mxo, ($mod->{'time'}+$mod->{'elapsed'}));
         $mod->{'human_endtime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
