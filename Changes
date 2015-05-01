@@ -1,6 +1,7 @@
 This file documents the revision history for the Devel::Module::Trace module
 
 0.03     coming soon
+          - performance tuning for large number of modules
           - fix deep recursion when loaded twice
           - fix problem with modules not returning from require
 

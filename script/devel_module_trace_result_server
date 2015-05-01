@@ -51,46 +51,39 @@ sub _get_output {
     };
 
     # clean parents from our result
-    my $results = _clean_results($data->{'result'});
+    my($results, $end_time) = _clean_results($data->{'result'});
     $stash->{'timeline'} = $results;
     # calculate percentages
     my $start_time = $results->[0]->{'time'};
-    my $end_time   = $start_time;
-    for my $mod (@{$results}) {
-        my $end = $mod->{'time'} + $mod->{'elapsed'};
-        if($end > $end_time) { $end_time = $end; }
-    }
     my $total_time = $end_time - $start_time;
     $stash->{'start_time'} = $start_time;
     $stash->{'end_time'}   = $end_time;
     $stash->{'total_time'} = $total_time;
+
+    # create uniq modules list
+    my $uniq = {};
     for my $mod (@{$results}) {
         $mod->{'offset_x'} = ($mod->{'time'} - $start_time) / $total_time;
         $mod->{'width'}    = $mod->{'elapsed'} / $total_time;
-    }
-
-    # get most used modules
-    my $most = {};
-    for my $mod (@{$results}) {
-        if(!defined $most->{$mod->{'name'}}) {
-            $most->{$mod->{'name'}} = {
+        if(!defined $uniq->{$mod->{'name'}}) {
+            $uniq->{$mod->{'name'}} = {
                 name     => $mod->{'name'},
                 count    => 0,
-                first    => $mod,
+                first    => $mod->{'caller'},
                 others   => [],
                 duration => 0,
             }
-        } else {
-            push @{$most->{$mod->{'name'}}->{'others'}}, $mod;
         }
-        $most->{$mod->{'name'}}->{'count'}++;
-        $most->{$mod->{'name'}}->{'duration'} += $mod->{'elapsed'};
+        $uniq->{$mod->{'name'}}->{'count'}++;
+        $uniq->{$mod->{'name'}}->{'duration'} += $mod->{'elapsed'};
     }
-    $stash->{'most'}    = [sort { $b->{count} <=> $a->{count} || $a->{name} cmp $b->{name} } values %{$most}];
-    $stash->{'modules'} = $most;
+    $stash->{'modules'} = $uniq;
+
+    # get most used modules
+    $stash->{'most_used'} = [sort { $uniq->{$b}->{count} <=> $uniq->{$a}->{count} || $uniq->{$a}->{name} cmp $uniq->{$b}->{name} } keys %{$uniq}];
 
     # get slowest used modules
-    $stash->{'slowest'} = [sort { $b->{duration} <=> $a->{duration} || $a->{name} cmp $b->{name} } values %{$most}];
+    $stash->{'slowest'} = [sort { $uniq->{$b}->{duration} <=> $uniq->{$a}->{duration} || $uniq->{$a}->{name} cmp $uniq->{$b}->{name} } keys %{$uniq}];
 
     my $template = _get_template();
     my $output;
@@ -110,12 +103,12 @@ sub _get_output {
 sub _clean_results {
     my($mods) = @_;
     my $flat = [];
+    my $total_end  = 0;
     for my $mod (@{$mods}) {
         delete $mod->{'parent'};
+        delete $mod->{'sub'};
         if(!exists $mod->{'elapsed'}) {
-            my $subs          = delete $mod->{'sub'};
             print STDERR "WARNING: no elapsed time in ",Dumper($mod);
-            $mod->{'sub'}     = $subs;
             $mod->{'elapsed'} = 0;
         }
         push @{$flat}, $mod;
@@ -127,8 +120,10 @@ sub _clean_results {
         $mod->{'human_endtime'} =
             POSIX::strftime("%H:%M:", localtime($time)).
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
+        my $end = $mod->{'time'} + $mod->{'elapsed'};
+        if($end > $total_end) { $total_end = $end; }
     }
-    return($flat);
+    return($flat, $total_end);
 }
 
 ################################################################################

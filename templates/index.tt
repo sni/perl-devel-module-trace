@@ -137,11 +137,11 @@
 </div>
 
 <script type="text/javascript">
-var slowest  = [% json_encode(slowest) %];
-var most     = [% json_encode(most) %];
-var modules  = [% json_encode(modules) %];
-var filter   = [% json_encode(filter) %];
-var timeline = [% json_encode(timeline) %];
+var timeline  = [% json_encode(timeline) %];
+var modules   = [% json_encode(modules) %];
+var most_used = [% json_encode(most_used) %];
+var slowest   = [% json_encode(slowest) %];
+var filter    = [% json_encode(filter) %];
 
 /* redraw all dynamic tables and graphs */
 function renew_all() {
@@ -153,41 +153,45 @@ function renew_all() {
 
 /* redraw the most used table */
 function renew_most_table() {
-    $('#most-table').children('tr:not(:first)').remove();
-    $.each(most, function(i, r) {
+    var newContent = "";
+    $.each(most_used, function(i, m) {
+      var r = modules[m];
       if(isFiltered(r)) { return; }
-      $('#most-table tr:last').after(
+      newContent +=
           '<tr>'
          +'<td>'+r.count+'</td>'
          +'<td>'+r.name+'</td>'
          +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
-         +'<td>'+r.first.caller+'</td>'
-         +'</tr>'
-      );
+         +'<td>'+r.first+'</td>'
+         +'</tr>';
     });
+    $('#most-table').children('tr:not(:first)').remove();
+    $('#most-table tr:last').after(newContent);
 }
 
 /* redraw the slowest modules table */
 function renew_slowest_table() {
-    $('#slowest-table').children('tr:not(:first)').remove();
-    $.each(slowest, function(i, r) {
+    var newContent = "";
+    $.each(slowest, function(i, m) {
+      var r = modules[m];
       if(isFiltered(r)) { return; }
-      $('#slowest-table tr:last').after(
+      newContent +=
           '<tr>'
          +'<td>'+r.count+'</td>'
          +'<td>'+r.name+'</td>'
          +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
-         +'<td>'+r.first.caller+'</td>'
-         +'</tr>'
-      );
+         +'<td>'+r.first+'</td>'
+         +'</tr>';
     });
+    $('#slowest-table').children('tr:not(:first)').remove();
+    $('#slowest-table tr:last').after(newContent);
 }
 
 /* redraw the timeline graph */
 function renew_timeline() {
-    $('#timeline').children().remove();
     var total_width = $('#timeline').width();
     var y           = -1;
+    var newContent  = "";
     $.each(timeline, function(i, r) {
       if(isFiltered(r)) { return; }
       var title = '<table class=\'nodetooltip\'>'
@@ -201,7 +205,7 @@ function renew_timeline() {
           +'</table>';
       var width = Math.floor(total_width*r.width)-2;
       if(width < 0) { width = 0; }
-      $('#timeline').append(
+      newContent +=
         '<span class="node_border" style="width: '+(Math.floor(total_width*r.width))+'px; left: '+(Math.floor(total_width*r.offset_x)-1)+'px; top: '+y+'px; height: 15px;">'
        +  '<span class="node'+("[% script %]" == r.caller_f ? ' direct' : '')+'"'
        +  'data-toggle="tooltip"'
@@ -209,10 +213,11 @@ function renew_timeline() {
        +  'style="width: '+width+'px; left: 0; top: 0;"'
        +  'title="'+title+'"'
        +  '>'+r.name+'</span>'
-       +'</span>'
-      );
+       +'</span>';
       y += 14;
     });
+    $('#timeline').children().remove();
+    $('#timeline').append(newContent);
     $('#timeline').css({height: (y+2)+'px'});
     $('#endmark').html('[% sprintf('%.4f', total_time) %]s');
 }
