@@ -91,8 +91,9 @@
   Legend: <span class="node direct legend">direct dependency</span><span class="node legend">indirect dependency</span><br />
 
   <div style="position: relative;">
-  <div style="position: absolute; top: -8px; left: -3px;">0s</div>
-  <div style="position: absolute; top: -8px; right: -3px;" id="endmark">1s</div>
+  <div style="position: absolute; top: 10px; left: -3px;">0s</div>
+  <div style="position: absolute; top: 10px; right: -3px;" id="endmark">1s</div>
+  <div style="position: relative; top: 5px; font-size: small; text-align: center;">Hide modules with less than <input type="text" value="0" onkeyup="renew_timeline_delayed();" onchange="renew_timeline_delayed();" id="hide_percent" style="font-size: small; width: 35px; height: 18px;">% load time.</div>
   <div style="position: relative; border: 1px solid grey; top: 10px;" id="timeline"></div>
   </div>
 </p>
@@ -148,7 +149,6 @@ function renew_all() {
     renew_timeline();
     renew_most_table();
     renew_slowest_table();
-    $('[data-toggle="tooltip"]').tooltip({html: true});
 }
 
 /* redraw the most used table */
@@ -192,8 +192,11 @@ function renew_timeline() {
     var total_width = $('#timeline').width();
     var y           = -1;
     var newContent  = "";
+    var hide_percent = Number($("#hide_percent").val());
+    if(isNaN(hide_percent)) { hide_percent = 0; }
     $.each(timeline, function(i, r) {
       if(isFiltered(r)) { return; }
+      if(hide_percent > 0 && hide_percent > (r.width * 100)) {return;}
       var title = '<table class=\'nodetooltip\'>'
           +'<tr><td>Name:</td><td>'+r.name+'</td></tr>'
           +'<tr><td>Started:</td><td>'+r.human_starttime+'</td></tr>'
@@ -220,6 +223,16 @@ function renew_timeline() {
     $('#timeline').append(newContent);
     $('#timeline').css({height: (y+2)+'px'});
     $('#endmark').html('[% sprintf('%.4f', total_time) %]s');
+    $('[data-toggle="tooltip"]').tooltip({html: true});
+}
+
+/* renew timeline delayed */
+var renewTimelineTimer;
+function renew_timeline_delayed() {
+    window.clearTimeout(renewTimer);
+    renewTimelineTimer = window.setTimeout(function() {
+        renew_timeline();
+    },150);
 }
 
 /* return true if given module matches a filter */
