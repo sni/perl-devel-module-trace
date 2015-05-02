@@ -53,7 +53,7 @@ sub _start {
 sub _get_output {
     my($data) = _read_results($file);
     my $stash = {
-        'sprintf'     => \&CORE::sprintf,
+        'sprintf'     => sub { return(sprintf(@_)) },
         'int'         => \&CORE::int,
         'strftime'    => sub { return(POSIX::strftime($_[0], localtime($_[1]))) },
         'json_encode' => sub { return(JSON::XS->new->encode($_[0])) },
