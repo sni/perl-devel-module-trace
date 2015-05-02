@@ -10,4 +10,4 @@ my $result = `$cmd`;
 is($?, 0, "return code");
 like($result, '/\s+Carp.pm\s+/', 'found Carp.pm');
 like($result, '/\s+Benchmark.pm\s+/', 'found Benchmark.pm');
-like($result, '/\s+Time/HiRes.pm\s+/', 'found Time/HiRes.pm');
+like($result, '/\s+Exporter.pm\s+/', 'found Exporter.pm');
