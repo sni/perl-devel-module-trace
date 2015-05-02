@@ -14,6 +14,9 @@
       TABLE.table TD, TABLE.table TH {
         white-space: nowrap;
       }
+      .tooltip-inner {
+        max-width: 600px;
+      }
       .node {
         white-space: nowrap;
         height: 13px;
@@ -111,6 +114,7 @@
     <th># Loaded</th>
     <th>Module</th>
     <th>Total Duration</th>
+    <th>Total Children</th>
     <th>First used in</th>
   </tr>
   </table>
@@ -129,6 +133,7 @@
     <th># Loaded</th>
     <th>Module</th>
     <th>Total Duration</th>
+    <th>Total Children</th>
     <th>First used in</th>
   </tr>
   </table>
@@ -162,6 +167,7 @@ function renew_most_table() {
          +'<td>'+r.count+'</td>'
          +'<td>'+r.name+'</td>'
          +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
+         +'<td>'+r.childs+'</td>'
          +'<td>'+r.first+'</td>'
          +'</tr>';
     });
@@ -180,6 +186,7 @@ function renew_slowest_table() {
          +'<td>'+r.count+'</td>'
          +'<td>'+r.name+'</td>'
          +'<td>'+Number(r.duration).toFixed(5)+'s</td>'
+         +'<td>'+r.childs+'</td>'
          +'<td>'+r.first+'</td>'
          +'</tr>';
     });
@@ -205,6 +212,7 @@ function renew_timeline() {
           +'<tr><td>Caller:</td><td>'+r.caller+'</td></tr>'
           +'<tr><td># Loaded:</td><td>'+modules[r.name].count+'</td></tr>'
           +'<tr><td>Total Duration:</td><td>'+Number(modules[r.name].duration).toFixed(5)+'s</td></tr>'
+          +'<tr><td>Total Children:</td><td>'+modules[r.name].childs+'</td></tr>'
           +'</table>';
       var width = Math.floor(total_width*r.width)-2;
       if(width < 0) { width = 0; }
@@ -223,7 +231,7 @@ function renew_timeline() {
     $('#timeline').append(newContent);
     $('#timeline').css({height: (y+2)+'px'});
     $('#endmark').html('[% sprintf('%.4f', total_time) %]s');
-    $('[data-toggle="tooltip"]').tooltip({html: true});
+    $('[data-toggle="tooltip"]').tooltip({html: true, delay: { "show": 50, "hide": 0 }});
 }
 
 /* renew timeline delayed */

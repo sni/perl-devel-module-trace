@@ -83,6 +83,7 @@ sub _get_output {
                 first    => $mod->{'caller'},
                 others   => [],
                 duration => 0,
+                childs   => $mod->{'childs'},
             }
         }
         $uniq->{$mod->{'name'}}->{'count'}++;
@@ -113,11 +114,13 @@ sub _get_output {
 ################################################################################
 sub _clean_results {
     my($mods) = @_;
-    my $flat = [];
-    my $total_end  = 0;
+    my $flat      = [];
+    my $total_end = 0;
+    my $levels    = [];
     for my $mod (@{$mods}) {
         delete $mod->{'parent'};
         delete $mod->{'sub'};
+        $mod->{'childs'} = 0 unless defined $mod->{'childs'};
         if(!exists $mod->{'elapsed'}) {
             print STDERR "WARNING: no elapsed time in ",Dumper($mod);
             $mod->{'elapsed'} = 0;
@@ -133,6 +136,13 @@ sub _clean_results {
             POSIX::strftime("%S", localtime($time)).'.'.$milliseconds;
         my $end = $mod->{'time'} + $mod->{'elapsed'};
         if($end > $total_end) { $total_end = $end; }
+        # count childs
+        if($mod->{'level'} > 0) {
+            for(my $x = $mod->{'level'}-1; $x >= 0; $x--) {
+                $levels->[$x]->{'childs'}++;
+            }
+        }
+        $levels->[$mod->{'level'}] = $mod;
     }
     return($flat, $total_end);
 }
